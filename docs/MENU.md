@@ -279,7 +279,7 @@ Fill  Table  Sort  Query  Distribution  Matrix  Regression  Parse  External
 - **Regression**  **[CPL]**
 - **Parse**  **[CPL]**
 - **External** → Connect | Use | Refresh | List | Reset | Disconnect  **[CPL v0.4]**
-  - Live SQL source (DataLens-equivalent). Drivers: `sqlite` (file path) and `postgres` (libpq URL). Read-only this milestone.
+  - Live SQL source (DataLens-equivalent). Upstream supports `sqlite` and `postgres`; the CharlyGolf web fork accepts only read-only `sqlite` files from the isolated session filesystem. PostgreSQL URLs are rejected before any connection attempt.
   - **Connect** prompts for a name (≤15 chars, named-range rules) and connection string; tests connectivity.
   - **Use** *name* *query* runs SQL, populates a pointer-anchored range marked external-bound (PROT visible).
   - **Refresh** re-runs the query in WAIT mode; replaces values in place.
@@ -292,8 +292,10 @@ Fill  Table  Sort  Query  Distribution  Matrix  Regression  Parse  External
 
 ## /System  (S)  **[MVP]**
 
-Suspend 1-2-3, shell out (`$SHELL` or `cmd.exe`); `exit` returns. On
-modern systems this is a proper shell with the alt-screen stashed.
+Upstream desktop builds suspend 1-2-3 and open the local shell. The
+CharlyGolf web fork keeps the menu position for compatibility but always
+returns `System disabled in the public web edition`; it never spawns a
+process.
 
 ---
 

@@ -21,7 +21,7 @@ use l123_engine::IronCalcEngine;
 use l123_graph::{GraphDef, Series};
 use l123_macro::MacroAction;
 use l123_menu::{self as menu, MenuItem};
-use l123_print::{encode::lp::LpOptions, PrintContentMode, PrintFormatMode, WorkbookView};
+use l123_print::{PrintContentMode, PrintFormatMode, WorkbookView};
 use ratatui::layout::Rect;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -760,9 +760,6 @@ pub(super) struct SearchSession {
 pub(super) enum PrintDestination {
     /// `/Print File`: write the ASCII stream to this path.
     File(PathBuf),
-    /// `/Print Printer`: pipe the ASCII stream (plus setup string) to
-    /// CUPS `lp` with these options.
-    Printer(LpOptions),
     /// `/Print Encoded`: write `setup_string` followed by the ASCII
     /// page bytes to this path. Raw printer-ready output — no PDF
     /// branching, no `lp` invocation.
@@ -818,10 +815,6 @@ pub(super) struct PrintSession {
 impl PrintSession {
     pub(super) fn new_file(path: PathBuf) -> Self {
         Self::with_destination(PrintDestination::File(path))
-    }
-
-    pub(super) fn new_printer() -> Self {
-        Self::with_destination(PrintDestination::Printer(LpOptions::default()))
     }
 
     pub(super) fn new_encoded(path: PathBuf) -> Self {

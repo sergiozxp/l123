@@ -2,8 +2,7 @@
 //!
 //! `App::run`, `run_with_file`, `run_with` set up crossterm and the
 //! tokio runtime, then hand the alt-screen Terminal to `event_loop`.
-//! `/System` interruption (the `pending_system_suspend` flag) drops
-//! into `suspend_to_shell` between iterations.
+//! The public web edition never suspends to an operating-system shell.
 
 use std::io;
 use std::path::PathBuf;
@@ -92,11 +91,6 @@ impl App {
             if self.take_pending_beep() {
                 emit_bell();
             }
-            if self.pending_system_suspend {
-                self.pending_system_suspend = false;
-                suspend_to_shell(terminal)?;
-                continue;
-            }
             // §4.7 — drain any queued long-running op. The render
             // above already showed the WAIT frame for this iteration;
             // the next render after the drain shows READY.
@@ -111,36 +105,4 @@ impl App {
         }
         Ok(())
     }
-}
-
-/// `/System` — leave the alt screen + raw mode, run an interactive
-/// shell, and on its exit restore the TUI. Mirrors the original 1-2-3
-/// R3.4a behavior of suspending to a DOS shell ("Type EXIT to return
-/// to 1-2-3"). Errors from the spawn are printed to the underlying
-/// terminal and otherwise swallowed; we always try to restore the TUI.
-fn suspend_to_shell<B: ratatui::backend::Backend>(terminal: &mut Terminal<B>) -> anyhow::Result<()>
-where
-    B::Error: Send + Sync + 'static,
-{
-    let mut stdout = io::stdout();
-    disable_raw_mode()?;
-    execute!(stdout, LeaveAlternateScreen, DisableMouseCapture)?;
-    terminal.show_cursor()?;
-
-    println!();
-    println!("(Type 'exit' to return to 1-2-3.)");
-
-    #[cfg(windows)]
-    let shell = std::env::var("COMSPEC").unwrap_or_else(|_| "cmd.exe".to_string());
-    #[cfg(not(windows))]
-    let shell = std::env::var("SHELL").unwrap_or_else(|_| "/bin/sh".to_string());
-
-    if let Err(e) = std::process::Command::new(&shell).status() {
-        eprintln!("l123: /System: failed to launch {shell}: {e}");
-    }
-
-    enable_raw_mode()?;
-    execute!(stdout, EnterAlternateScreen, EnableMouseCapture)?;
-    terminal.clear()?;
-    Ok(())
 }

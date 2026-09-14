@@ -204,7 +204,7 @@ pub fn parse_connection_string(s: &str) -> Result<Box<dyn DataSource>, ExtSource
             }
             Ok(Box::new(SqliteSource::new(PathBuf::from(rest))))
         }
-        "postgres" | "postgresql" => Ok(Box::new(PostgresSource::new(trimmed.to_string()))),
+        "postgres" | "postgresql" => Err(ExtSourceError::UnsupportedScheme(scheme.into())),
         other => Err(ExtSourceError::UnsupportedScheme(other.into())),
     }
 }
@@ -289,20 +289,19 @@ mod tests {
     }
 
     #[test]
-    fn parses_postgres_scheme() {
-        // The URL parses; test_connection will fail because the
-        // host doesn't resolve / port isn't listening. The point is
-        // the dispatch reaches PostgresSource, not UnsupportedScheme.
-        let s = parse_connection_string("postgres://localhost:1/nonexistent_db_v04")
-            .expect("scheme parses");
-        let err = s.test_connection().expect_err("nothing listening");
-        assert!(matches!(err, ExtSourceError::Connect(_, _)));
+    fn rejects_postgres_scheme_in_public_web_edition() {
+        let err = parse_connection_string("postgres://localhost:5432/private")
+            .err()
+            .expect("postgres must be disabled");
+        assert!(matches!(err, ExtSourceError::UnsupportedScheme(ref s) if s == "postgres"));
     }
 
     #[test]
-    fn parses_postgresql_alias() {
-        let s = parse_connection_string("postgresql://localhost:1/x").expect("alias parses");
-        assert!(s.test_connection().is_err());
+    fn rejects_postgresql_alias_in_public_web_edition() {
+        let err = parse_connection_string("postgresql://localhost/private")
+            .err()
+            .expect("postgresql must be disabled");
+        assert!(matches!(err, ExtSourceError::UnsupportedScheme(ref s) if s == "postgresql"));
     }
 
     #[test]

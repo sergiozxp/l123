@@ -369,12 +369,6 @@ pub struct App {
     /// `/Worksheet Status` panel or the `/Worksheet Global Default
     /// Status` defaults panel.
     stat_view: StatView,
-    /// Set by `Action::System` and consumed by the event loop on the
-    /// next iteration: leaves the alt-screen, drops raw mode, spawns
-    /// `$SHELL`, and on its exit restores the TUI. Lives on `App`
-    /// instead of being executed inline because the dispatcher doesn't
-    /// own the `Terminal`; the event loop does.
-    pending_system_suspend: bool,
     /// Active macro execution state. `Some` while a macro is
     /// running (possibly suspended for user input); `None` when
     /// idle. Constructed by [`run_macro_at`] / [`run_named_macro`]
@@ -1298,7 +1292,6 @@ impl App {
             display_mode: DisplayMode::default(),
             show_gridlines: false,
             stat_view: StatView::Worksheet,
-            pending_system_suspend: false,
             macro_state: None,
             macro_pumping: false,
             pending_macro_input_loc: None,
@@ -3656,7 +3649,9 @@ impl App {
             Action::FileOpenBefore => self.start_file_open_prompt(true),
             Action::FileOpenAfter => self.start_file_open_prompt(false),
             Action::PrintFile => self.start_print_file_prompt(),
-            Action::PrintPrinter => self.start_print_printer(),
+            Action::PrintPrinter => {
+                self.set_error("Direct printing disabled in the public web edition")
+            }
             Action::PrintEncoded => self.start_print_encoded_prompt(),
             Action::PrintCancel => self.finish_print_session(),
             Action::PrintSessionRange => self.begin_point(PendingCommand::PrintFileRange),
@@ -3724,9 +3719,7 @@ impl App {
             Action::FileListActive => self.open_file_list(FileListKind::Active),
             Action::FileListOther => self.open_file_list(FileListKind::Other),
             Action::System => {
-                self.menu = None;
-                self.pending_system_suspend = true;
-                self.mode = Mode::Ready;
+                self.set_error("System disabled in the public web edition")
             }
             Action::GraphTypeLine => self.set_graph_type(GraphType::Line),
             Action::GraphTypeBar => self.set_graph_type(GraphType::Bar),
@@ -4550,14 +4543,6 @@ impl App {
         self.mode = Mode::Menu;
     }
 
-    /// `/Print Printer`: open a printer session straight away — no path
-    /// prompt. Shares the submenu with `/Print File`; the Go branch
-    /// sends output through CUPS `lp` instead of writing a file.
-    fn start_print_printer(&mut self) {
-        self.print = Some(PrintSession::new_printer());
-        self.enter_print_file_menu();
-    }
-
     /// `/Print Encoded`: prompt for the destination path. On commit a
     /// session is opened with [`PrintDestination::Encoded`] and the
     /// shared `/PF` submenu is entered.
@@ -4806,23 +4791,6 @@ impl App {
                     out
                 };
                 let _ = std::fs::write(path, bytes);
-            }
-            PrintDestination::Printer(lp_opts) => {
-                #[cfg(unix)]
-                {
-                    let mut effective = lp_opts.clone();
-                    if !session.setup_string.is_empty() {
-                        effective.setup_string = Some(session.setup_string.clone());
-                    }
-                    if !session.lp_destination.is_empty() {
-                        effective.destination = Some(session.lp_destination.clone());
-                    }
-                    let _ = l123_print::encode::lp::to_lp(&grid, &effective);
-                }
-                #[cfg(not(unix))]
-                {
-                    let _ = lp_opts; // hold field live on non-unix
-                }
             }
             PrintDestination::Encoded(path) => {
                 if let Some(parent) = path.parent() {

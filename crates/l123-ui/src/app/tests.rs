@@ -4593,6 +4593,29 @@ fn corner_follows_active_sheet_after_insert() {
 }
 
 #[test]
+fn public_web_edition_blocks_system_shell() {
+    let mut app = App::new();
+    app.execute_action(Action::System);
+    assert_eq!(app.mode, Mode::Error);
+    assert_eq!(
+        app.error_message.as_deref(),
+        Some("System disabled in the public web edition")
+    );
+}
+
+#[test]
+fn public_web_edition_blocks_direct_printer() {
+    let mut app = App::new();
+    app.execute_action(Action::PrintPrinter);
+    assert!(app.print.is_none());
+    assert_eq!(app.mode, Mode::Error);
+    assert_eq!(
+        app.error_message.as_deref(),
+        Some("Direct printing disabled in the public web edition")
+    );
+}
+
+#[test]
 fn external_sources_snapshot_strips_postgres_password() {
     // M12 v0.4 slice 4b — verify the save-time snapshot scrubs
     // passwords from postgres URLs before they hit the xlsx

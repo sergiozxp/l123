@@ -1,5 +1,11 @@
 # L123 — Lotus 1-2-3 TUI Spreadsheet (Spec v0.4)
 
+> **CharlyGolf web-fork security profile:** the public server build deliberately
+> disables `/System`, PostgreSQL external sources, and direct CUPS printing.
+> SQLite remains read-only. Runtime isolation additionally supplies no outbound
+> network, a read-only container filesystem, an ephemeral session directory,
+> an unprivileged user, resource limits, and automatic session cleanup.
+
 > v0.4 (2026-05-02) adds a native plug-in surface (§22): Alt-F10 ADDIN
 > opens a built-in Data Workbench for VisiData-style transforms over a
 > range; APP1/APP2/APP3 are reserved for user plug-ins. Modern data
